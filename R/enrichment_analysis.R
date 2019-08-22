@@ -169,12 +169,17 @@ print_enrichment_results <- function(results, subset_sizes,
     # For GO enrichment results, make GO: categories hyperlinks
     if(enrichment_type == 'go') {
         if (!is.null(gene_mapping)) {
-            gene_mapping$category <- sprintf("<a href='http://amigo.geneontology.org/amigo/term/%s'>%s</a>",
-                                             gene_mapping$category, gene_mapping$category)
+            #gene_mapping$category <- sprintf("<a href='http://amigo.geneontology.org/amigo/term/%s'>%s</a>",
+            #                                 gene_mapping$category, gene_mapping$category)
+            
+            # for now, let's skip adding the link to GO terms for the purpose of writing output to excel
+            # added Aug 21, 2019 by Kennedy Mwangi
+            gene_mapping$category <- sprintf("%s",gene_mapping$category)
         }
         if (!is.null(annotation_mapping)) {
-            annotation_mapping$category <- sprintf("<a href='http://amigo.geneontology.org/amigo/term/%s'>%s</a>",
-                                                   annotation_mapping$category, annotation_mapping$category)
+            #annotation_mapping$category <- sprintf("<a href='http://amigo.geneontology.org/amigo/term/%s'>%s</a>",
+            #                                       annotation_mapping$category, annotation_mapping$category)
+            annotation_mapping$category <- sprintf("%s",annotation_mapping$category)
         }
     }
 
@@ -198,8 +203,9 @@ print_enrichment_results <- function(results, subset_sizes,
 
         # For GO enrichment results, make GO: categories hyperlinks
         if(enrichment_type == 'go') {
-            result$category <- sprintf("<a href='http://amigo.geneontology.org/amigo/term/%s'>%s</a>",
-                                       result$category, result$category)
+            #result$category <- sprintf("<a href='http://amigo.geneontology.org/amigo/term/%s'>%s</a>",
+            #                           result$category, result$category)
+            result$category <- sprintf("%s", result$category)
         }
 
         # determine number of over- and under-represented categories
@@ -260,6 +266,28 @@ print_enrichment_results <- function(results, subset_sizes,
                                          
                 print(xkable(gene_list, str_max_width=str_max_width, row.names=FALSE))
                 cat('\n')
+            }  else {
+                # else block added Aug 20, 2019 by Kennedy Mwangi
+                # Purpose: write out genes responsible for enrichment
+                # Not good practice to write code this way. This is just a quick workaround
+                
+                gene_list <- gene_mapping %>% filter(category %in% out$category & 
+                                                         color==result_name)
+                gene_list <- gene_list[!duplicated(gene_list),]
+                
+                enrich_output_dir <- "../results/genes_responsible_for_enrichment"
+                
+                if (!dir.exists(enrich_output_dir)) {
+                    dir.create(enrich_output_dir, recursive=TRUE)
+                }
+                
+                enrich_output_filename <- "genes_responsible_for_enrichment_over-represented.xlsx"
+            
+                xlsx::write.xlsx(gene_list,
+                                 file = file.path(enrich_output_dir, enrich_output_filename),
+                                 sheetName = result_name, 
+                                 append = TRUE,
+                                 row.names = FALSE)
             }
         }
 
@@ -288,6 +316,33 @@ print_enrichment_results <- function(results, subset_sizes,
                                          
                 print(xkable(gene_list, str_max_width=str_max_width, row.names=FALSE))
                 cat('\n')
+            } else {
+                # else  and if blocks added Aug 20, 2019 by Kennedy Mwangi
+                # Purpose: write out genes responsible for enrichment
+                # Not good practice to write code this way. This is just a quick workaround
+                
+                if (!sum(out$num_in_subset) == 0){
+                    # this if block ensures error related to writing out zero 
+                    # enriched genes is avoided
+                    
+                    gene_list <- gene_mapping %>% filter(category %in% out$category & 
+                                                             color==result_name)
+                    gene_list <- gene_list[!duplicated(gene_list),]
+                    
+                    enrich_output_dir <- "../results/genes_responsible_for_enrichment"
+                    
+                    if (!dir.exists(enrich_output_dir)) {
+                        dir.create(enrich_output_dir, recursive=TRUE)
+                    }
+                    
+                    enrich_output_filename <- "genes_responsible_for_enrichment_under-represented.xlsx"
+                    
+                    xlsx::write.xlsx(gene_list, 
+                                     file = file.path(enrich_output_dir, enrich_output_filename),
+                                     sheetName = result_name, 
+                                     append = TRUE,
+                                     row.names = FALSE)
+                }
             }
         }
     }
